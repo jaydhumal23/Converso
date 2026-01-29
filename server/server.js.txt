@@ -1,0 +1,57 @@
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors")
+const connectDB = require("./config/connectDB")
+const colors = require("colors")
+
+
+const app = express();
+
+const PORT = 8000
+
+
+
+const server = http.createServer(app);
+
+
+
+
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+
+    }
+});
+
+io.on("connection", (socket) => {
+
+    console.log(`User Connected: $${socket.id}\n`);
+    socket.on("join-room", (roomId) => {
+        socket.join(roomId)
+        socket.to(roomId).emit("user-joined", socket.id)
+        console.log(roomId)
+    });
+    socket.on("offer", ({ offer, roomId }) => {
+        console.log(`\n offer \n`)
+        console.log(offer)
+        socket.to(roomId).emit("offer", offer)
+    });
+    socket.on("answer", ({ answer, roomId }) => {
+        console.log(`\n answer \n`)
+        console.log(answer)
+        socket.to(roomId).emit("answer", answer)
+    });
+    socket.on("ice-candidate", ({ candidate, roomId }) => {
+        console.log(`\ncandidate\n`)
+        console.log(candidate)
+        socket.to(roomId).emit("ice-candidate", candidate)
+    });
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+    console.log(`Signaling server running on port ${PORT}`.bgCyan.white)
+    console.log(`Local: http://localhost:${PORT}`.bgCyan.white);
+    console.log(`Network: http://10.244.236.11:${PORT}`.bgCyan.white);
+})
