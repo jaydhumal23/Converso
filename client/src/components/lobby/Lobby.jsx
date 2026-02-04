@@ -78,6 +78,7 @@ const Lobby = ({ onJoinRoom }) => {
         }
     };
 
+
     return (
         <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950">
             {/* Modern Header */}
@@ -102,7 +103,7 @@ const Lobby = ({ onJoinRoom }) => {
                     </div>
                     <button
                         onClick={logout}
-                        className="text-gray-400 hover:text-white transition-colors px-4 py-2 rounded-xl hover:bg-white/5"
+                        className="text-gray-400 cursor-pointer hover:text-white transition-colors px-4 py-2 rounded-xl hover:bg-white/5"
                     >
                         Logout
                     </button>
@@ -114,7 +115,7 @@ const Lobby = ({ onJoinRoom }) => {
                 <div className="flex justify-between items-center mb-12">
                     <div>
                         <h1 className="text-4xl font-bold text-white mb-2">
-                            Welcome, <span className="bg-linear-to-rrom-purple-400 to-pink-400 bg-clip-text text-transparent">{user?.username}</span>! 👋
+                            Welcome, <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">{user?.username} </span>!
                         </h1>
                         <p className="text-gray-400">
                             Join an existing room or create your own
@@ -123,7 +124,7 @@ const Lobby = ({ onJoinRoom }) => {
 
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="bg-linear-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-purple-500/50 transform hover:scale-105 active:scale-95"
+                        className="bg-linear-to-r cursor-pointer from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-purple-500/50 transform hover:scale-105 active:scale-95"
                     >
                         + Create Room
                     </button>
@@ -138,12 +139,12 @@ const Lobby = ({ onJoinRoom }) => {
                     </div>
                 ) : rooms.length === 0 ? (
                     <div className="text-center py-20 bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10">
-                        <div className="text-7xl mb-4">🎥</div>
+
                         <h3 className="text-2xl font-semibold text-white mb-2">No active rooms</h3>
                         <p className="text-gray-400 mb-6">Be the first to create a room!</p>
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="bg-linear-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg inline-flex items-center gap-2"
+                            className="bg-linear-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg inline-flex items-center gap-2 cursor-pointer"
                         >
                             Create First Room
                         </button>

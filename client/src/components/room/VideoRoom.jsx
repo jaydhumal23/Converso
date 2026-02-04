@@ -559,7 +559,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
                     </div>
                     <button
                         onClick={handleLeave}
-                        className="bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600 transition shadow-lg"
+                        className="bg-red-500 cursor-pointer text-white px-4 py-2 rounded-xl hover:bg-red-600 transition shadow-lg"
                     >
                         Leave Room
                     </button>
@@ -620,7 +620,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
                 <div className="flex justify-center gap-4">
                     <button
                         onClick={toggleMic}
-                        className={`p-4 rounded-2xl transition transform hover:scale-110 active:scale-95 ${isMuted ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/50' : 'bg-white/10 hover:bg-white/20'
+                        className={`p-4 rounded-2xl cursor-pointer transition transform hover:scale-110 active:scale-95 ${isMuted ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/50' : 'bg-white/10 hover:bg-white/20'
                             }`}
                         title={isMuted ? 'Unmute' : 'Mute'}
                     >
@@ -638,7 +638,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
                     <button
                         onClick={toggleVideo}
-                        className={`p-4 rounded-2xl transition transform hover:scale-110 active:scale-95 ${isVideoOff ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/50' : 'bg-white/10 hover:bg-white/20'
+                        className={`p-4 rounded-2xl cursor-pointer transition transform hover:scale-110 active:scale-95 ${isVideoOff ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/50' : 'bg-white/10 hover:bg-white/20'
                             }`}
                         title={isVideoOff ? 'Start Video' : 'Stop Video'}
                     >
@@ -656,7 +656,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
                     <button
                         onClick={() => setShowSettings(true)}
-                        className="p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition transform hover:scale-110 active:scale-95"
+                        className="p-4 rounded-2xl cursor-pointer bg-white/10 hover:bg-white/20 transition transform hover:scale-110 active:scale-95"
                         title="Settings"
                     >
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -667,7 +667,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
                     <button
                         onClick={handleLeave}
-                        className="p-4 rounded-2xl bg-red-500 hover:bg-red-600 transition transform hover:scale-110 active:scale-95 shadow-lg shadow-red-500/50"
+                        className="p-4 rounded-2xl cursor-pointer bg-red-500 hover:bg-red-600 transition transform hover:scale-110 active:scale-95 shadow-lg shadow-red-500/50"
                         title="Leave Room"
                     >
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

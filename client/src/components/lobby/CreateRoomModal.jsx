@@ -19,8 +19,8 @@ const CreateRoomModal = ({ onClose, onCreate }) => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div className="bg-slate-900 rounded-3xl p-6 w-full max-w-md border border-white/10 shadow-2xl animate-in zoom-in duration-200">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-white">Create New Room</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white transition p-2 hover:bg-white/5 rounded-xl">
+                    <h2 className="text-2xl font-bold text-white  ">Create New Room</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white transition  px-4 py-2 hover:bg-white/5 rounded-xl cursor-pointer ">
                         ✕
                     </button>
                 </div>
@@ -60,14 +60,14 @@ const CreateRoomModal = ({ onClose, onCreate }) => {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3 bg-white/5 text-white rounded-xl font-semibold hover:bg-white/10 transition"
+                            className="flex-1 py-3 bg-white/5 text-white cursor-pointer rounded-xl font-semibold hover:bg-white/10 transition"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 py-3 bg-linear-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition shadow-lg disabled:opacity-50"
+                            className="flex-1 py-3 bg-linear-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition shadow-lg disabled:opacity-50 cursor-pointer"
                         >
                             {loading ? 'Creating...' : 'Create Room'}
                         </button>

@@ -21,7 +21,7 @@ const RoomCard = ({ room, onJoin, onDelete }) => {
     };
 
     return (
-        <div className="group bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-purple-500/50 transition-all hover:shadow-xl hover:shadow-purple-500/10 transform hover:-translate-y-1">
+        <div className="group bg-gray-600/20 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-purple-500/50 transition-all hover:shadow-xl hover:shadow-purple-500/10 transform hover:-translate-y-1">
             <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                     <h3 className="text-xl font-bold text-white mb-1">
@@ -44,7 +44,7 @@ const RoomCard = ({ room, onJoin, onDelete }) => {
                     {isOwner && (
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition"
+                            className="p-2 text-red-400 cursor-pointer hover:text-red-300 hover:bg-red-500/10 rounded-xl transition"
                             title="Delete room"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,14 +67,14 @@ const RoomCard = ({ room, onJoin, onDelete }) => {
                 disabled={isFull}
                 className={`w-full py-3 rounded-xl font-semibold transition-all ${isFull
                     ? 'bg-gray-600/20 text-gray-500 cursor-not-allowed'
-                    : 'bg-linear-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-purple-500/50 transform hover:scale-105 active:scale-95'
+                    : 'bg-linear-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-purple-500/50 cursor-pointer transform hover:scale-105 active:scale-95'
                     }`}
             >
                 {isFull ? 'Room Full' : 'Join Room'}
             </button>
 
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                <div className="fixed inset-0 bg-gray-950/20 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
                     <div className="bg-slate-900 rounded-3xl p-6 w-full max-w-md border border-white/10 shadow-2xl">
                         <h3 className="text-xl font-bold text-white mb-4">Delete Room?</h3>
                         <p className="text-gray-400 mb-6">
@@ -89,14 +89,14 @@ const RoomCard = ({ room, onJoin, onDelete }) => {
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
                                 disabled={deleting}
-                                className="flex-1 py-3 bg-white/5 text-white rounded-xl font-semibold hover:bg-white/10 transition disabled:opacity-50"
+                                className="flex-1 py-3 bg-white/5 text-white cursor-pointer rounded-xl font-semibold hover:bg-white/10 transition disabled:opacity-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleDelete}
                                 disabled={deleting}
-                                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition disabled:opacity-50"
+                                className="flex-1 py-3 bg-red-500 cursor-pointer text-white rounded-xl font-semibold hover:bg-red-600 transition  disabled:opacity-50"
                             >
                                 {deleting ? 'Deleting...' : 'Delete'}
                             </button>

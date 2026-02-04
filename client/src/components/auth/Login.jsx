@@ -1,12 +1,13 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
+import { Eye, EyeOff } from 'lucide-react';
 
 const Login = ({ onRegisterClick }) => {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { login } = useContext(AuthContext);
-
+    const [showPassword, setShowPassword] = useState(false);
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -49,26 +50,39 @@ const Login = ({ onRegisterClick }) => {
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             required
                             className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
-                            placeholder="your@email.com"
+                            placeholder="jay@me.com"
                         />
                     </div>
 
-                    <div>
+                    <div className="relative">
                         <label className="block text-white/90 mb-2 text-sm font-medium">Password</label>
                         <input
-                            type="password"
+                            type={showPassword ? "text" : "password"} // <-- toggle here
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             required
-                            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
+                            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all pr-10"
                             placeholder="••••••••"
                         />
+
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 pt-7 cursor-pointer text-gray-300 hover:text-gray-300 focus:outline-none"
+                        >
+                            {showPassword ? (
+                                <EyeOff className="h-5 w-5" />
+                            ) : (
+                                <Eye className="h-5 w-5" />
+                            )}
+                        </button>
                     </div>
+
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-linear-to-r from-purple-500 to-pink-500 text-white py-3.5 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
+                        className="w-full bg-linear-to-r cursor-pointer from-purple-500 to-pink-500 text-white py-3.5 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
                     >
                         {loading ? (
                             <span className="flex items-center justify-center gap-2">
@@ -81,7 +95,7 @@ const Login = ({ onRegisterClick }) => {
 
                 <p className="text-gray-400 text-center mt-6 text-sm">
                     Don't have an account?{' '}
-                    <button onClick={onRegisterClick} className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">
+                    <button onClick={onRegisterClick} className="text-purple-400 cursor-pointer hover:text-purple-300 font-semibold transition-colors">
                         Register
                     </button>
                 </p>
