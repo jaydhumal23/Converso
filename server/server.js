@@ -5,11 +5,11 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const authRoutes = require('./routes/auth');
-const roomRoutes = require('./routes/rooms');
-const userRoutes = require('./routes/users');
+const authRoutes = require('./routes/auth.js');
+const roomRoutes = require('./routes/rooms.js');
+const userRoutes = require('./routes/users.js');
 const { handleSocketConnection } = require('./socket/socketHandlers.js');
-const connectDB = require('./config/connectDB');
+const connectDB = require('./config/connectDB.js');
 
 const app = express();
 const server = http.createServer(app);
