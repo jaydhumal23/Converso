@@ -51,14 +51,14 @@ exports.handleSocketConnection = (io) => {
           room = await Room.findOneAndUpdate(
             { roomId, 'participants.userId': userId },
             { $set: { 'participants.$.socketId': socket.id } },
-            { new: true }
+            { returnDocument: 'after' }
           );
         } else {
           // Add participant atomically
           room = await Room.findOneAndUpdate(
             { roomId, $expr: { $lt: [{ $size: '$participants' }, '$maxParticipants'] } },
             { $push: { participants: { userId, username, socketId: socket.id, joinedAt: new Date(), isMuted: false, isVideoOff: false } } },
-            { new: true }
+            { returnDocument: 'after' }
           );
         }
 
@@ -196,7 +196,7 @@ async function handleLeaveRoom(socket, io, roomId, userId) {
     const room = await Room.findOneAndUpdate(
       { roomId },
       { $pull: { participants: { userId } } },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!room) return; // Room already deleted
