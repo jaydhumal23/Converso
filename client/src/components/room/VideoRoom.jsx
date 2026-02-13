@@ -23,6 +23,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
         audioOutput: 'default',
         videoInput: 'default',
     });
+    const [mediaReady, setMediaReady] = useState(false);
 
     const localVideoRef = useRef();
     const peersRef = useRef({});
@@ -91,6 +92,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
                 localStreamRef.current = stream;
                 setLocalStream(stream);
+                setMediaReady(true);
 
                 if (localVideoRef.current) {
                     localVideoRef.current.srcObject = stream;
@@ -139,7 +141,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
 
     useEffect(() => {
-        if (!socket || !localStream || roomJoinedRef.current) return;
+        if (!socket || !mediaReady || !localStreamRef.current || roomJoinedRef.current) return;
 
         console.log(' SETTING UP WEBRTC');
         roomJoinedRef.current = true;
@@ -540,7 +542,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
             peersRef.current = {};
             setPeers({});
         };
-    }, [socket, localStream, roomId, user.id, user.username]);
+    }, [socket, mediaReady, roomId, user.id, user.username]);
 
     const toggleMic = () => {
         if (localStreamRef.current?.getAudioTracks()[0]) {

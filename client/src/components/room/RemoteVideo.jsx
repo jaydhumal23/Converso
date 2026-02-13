@@ -6,6 +6,25 @@ const RemoteVideo = ({ stream, socketId, username, audioOutput, peerConnection }
     const [hasVideo, setHasVideo] = useState(true);
     const [hasAudio, setHasAudio] = useState(true);
     const [stats, setStats] = useState(null);
+    const [showStats, setShowStats] = useState(false);
+    const hideTimerRef = useRef(null);
+
+    const handleMouseEnter = () => {
+        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+        setShowStats(true);
+        hideTimerRef.current = setTimeout(() => setShowStats(false), 5000);
+    };
+
+    const handleMouseLeave = () => {
+        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = setTimeout(() => setShowStats(false), 1000);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+        };
+    }, []);
 
     // Collect WebRTC stats periodically
     useEffect(() => {
@@ -115,7 +134,11 @@ const RemoteVideo = ({ stream, socketId, username, audioOutput, peerConnection }
     }, [stream, audioOutput]);
 
     return (
-        <div className="relative bg-bg-elevated rounded-xl overflow-hidden aspect-video border border-border">
+        <div
+            className="relative bg-bg-elevated rounded-xl overflow-hidden aspect-video border border-border"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+        >
             {stream && hasVideo ? (
                 <video
                     ref={videoRef}
@@ -144,9 +167,9 @@ const RemoteVideo = ({ stream, socketId, username, audioOutput, peerConnection }
                 {!hasVideo && <span className="text-warning">·Off</span>}
             </div>
 
-            {/* Connection quality indicator */}
+            {/* Connection quality indicator - shown on hover */}
             {stats?.video?.bitrate > 0 && (
-                <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 px-2 py-1 rounded-md">
+                <div className={`absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 px-2 py-1 rounded-md transition-opacity duration-300 ${showStats ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     <div className={`w-1.5 h-1.5 rounded-full ${getQualityColor()}`}></div>
                     <span className="text-white/70 text-[10px] font-mono">
                         {stats.video.width && stats.video.height ? `${stats.video.width}×${stats.video.height}` : ''}

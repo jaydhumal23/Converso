@@ -39,6 +39,27 @@ app.set('io', io);
 // Socket handlers
 handleSocketConnection(io);
 
+
+// Global error handler middleware
+app.use((err, req, res, next) => {
+    console.error('Express error:', err);
+    res.status(err.status || 500).json({
+        message: err.message || 'Internal Server Error',
+        success: false
+    });
+});
+
+// Process-level error handlers
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    // Optionally: process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Optionally: process.exit(1);
+});
+
 // Start server
 const PORT = process.env.PORT || 8000;
 server.listen(PORT, '0.0.0.0', () => {
