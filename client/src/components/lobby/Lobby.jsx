@@ -99,7 +99,7 @@ const Lobby = ({ onJoinRoom }) => {
             <nav className="bg-surface border-b border-border px-4 sm:px-6 py-3 sm:py-4 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
                     <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                        <h1 className="text-base sm:text-lg font-semibold text-tx truncate tracking-tight">WebRTC</h1>
+                        <h1 className="text-base sm:text-lg font-semibold text-tx truncate tracking-tight">Converso</h1>
                         {connected ? (
                             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border">
                                 <div className="w-1.5 h-1.5 bg-success rounded-full"></div>
