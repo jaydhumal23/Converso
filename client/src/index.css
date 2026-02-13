@@ -1,1 +1,83 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-bg: var(--color-bg-val);
+  --color-bg-secondary: var(--color-bg-secondary-val);
+  --color-bg-elevated: var(--color-bg-elevated-val);
+  --color-bg-hover: var(--color-bg-hover-val);
+  --color-surface: var(--color-surface-val);
+  --color-surface-hover: var(--color-surface-hover-val);
+  --color-tx: var(--color-tx-val);
+  --color-tx-secondary: var(--color-tx-secondary-val);
+  --color-tx-muted: var(--color-tx-muted-val);
+  --color-border: var(--color-border-val);
+  --color-border-hover: var(--color-border-hover-val);
+  --color-accent: var(--color-accent-val);
+  --color-accent-hover: var(--color-accent-hover-val);
+  --color-accent-subtle: var(--color-accent-subtle-val);
+  --color-danger: var(--color-danger-val);
+  --color-danger-hover: var(--color-danger-hover-val);
+  --color-success: var(--color-success-val);
+  --color-warning: var(--color-warning-val);
+}
+
+/* Light Mode */
+:root {
+  --color-bg-val: #f8f8fa;
+  --color-bg-secondary-val: #ffffff;
+  --color-bg-elevated-val: #eeeef1;
+  --color-bg-hover-val: #e4e4e8;
+  --color-surface-val: #ffffff;
+  --color-surface-hover-val: #f2f2f5;
+  --color-tx-val: #111113;
+  --color-tx-secondary-val: #555560;
+  --color-tx-muted-val: #9191a0;
+  --color-border-val: rgba(0, 0, 0, 0.08);
+  --color-border-hover-val: rgba(0, 0, 0, 0.15);
+  --color-accent-val: #18181b;
+  --color-accent-hover-val: #2c2c31;
+  --color-accent-subtle-val: #f0f0f3;
+  --color-danger-val: #b91c1c;
+  --color-danger-hover-val: #991b1b;
+  --color-success-val: #15803d;
+  --color-warning-val: #a16207;
+}
+
+/* Dark Mode */
+.dark {
+  --color-bg-val: #09090b;
+  --color-bg-secondary-val: #111114;
+  --color-bg-elevated-val: #18181c;
+  --color-bg-hover-val: #222228;
+  --color-surface-val: #151518;
+  --color-surface-hover-val: #1e1e23;
+  --color-tx-val: #ededf0;
+  --color-tx-secondary-val: #8c8c99;
+  --color-tx-muted-val: #5c5c6a;
+  --color-border-val: rgba(255, 255, 255, 0.07);
+  --color-border-hover-val: rgba(255, 255, 255, 0.14);
+  --color-accent-val: #e4e4e8;
+  --color-accent-hover-val: #cacace;
+  --color-accent-subtle-val: #1e1e24;
+  --color-danger-val: #dc2626;
+  --color-danger-hover-val: #ef4444;
+  --color-success-val: #22c55e;
+  --color-warning-val: #eab308;
+}
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-bg-val);
+  color: var(--color-tx-val);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}

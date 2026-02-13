@@ -33,6 +33,9 @@ const io = new Server(server, {
     }
 });
 
+// Make io accessible in REST routes (for roomController emit)
+app.set('io', io);
+
 // Socket handlers
 handleSocketConnection(io);
 

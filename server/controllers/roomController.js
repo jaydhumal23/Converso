@@ -1,12 +1,12 @@
 const Room = require('../models/Room');
-const { nanoid } = require('nanoid');
+const crypto = require('crypto');
 
 // @desc    Create new room
 // @route   POST /api/rooms/create
 exports.createRoom = async (req, res) => {
     try {
         const { roomName, maxParticipants } = req.body;
-        const roomId = nanoid(10); // Generate unique room ID
+        const roomId = crypto.randomBytes(5).toString('hex'); // Generate unique room ID
 
         const room = await Room.create({
             roomId,
@@ -19,12 +19,18 @@ exports.createRoom = async (req, res) => {
         // Populate creator info
         await room.populate('createdBy', 'username email');
 
+        // Convert to plain object for consistent serialization
+        const roomData = room.toObject({ virtuals: true });
+
         // Emit to all connected clients (handled in socket)
-        req.app.get('io').emit('room-created', room);
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('room-created', roomData);
+        }
 
         res.status(201).json({
             success: true,
-            room
+            room: roomData
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -86,7 +92,10 @@ exports.deleteRoom = async (req, res) => {
         await room.deleteOne();
 
         // Emit to all clients
-        req.app.get('io').emit('room-deleted', { roomId: req.params.roomId });
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('room-deleted', { roomId: req.params.roomId });
+        }
 
         res.json({ success: true, message: 'Room deleted' });
     } catch (error) {

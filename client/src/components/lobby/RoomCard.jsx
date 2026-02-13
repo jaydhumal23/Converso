@@ -4,7 +4,14 @@ import { AuthContext } from '../../context/AuthContext';
 const RoomCard = ({ room, onJoin, onDelete }) => {
     const { user } = useContext(AuthContext);
     const isFull = room.participants.length >= room.maxParticipants;
-    const isOwner = room.createdBy?._id === user?.id || room.createdBy?.id === user?.id;
+    // Handle createdBy as populated object OR raw string ID
+    const creatorId = typeof room.createdBy === 'string'
+        ? room.createdBy
+        : (room.createdBy?._id || room.createdBy?.id);
+    const isOwner = creatorId === user?.id;
+    const creatorName = typeof room.createdBy === 'string'
+        ? (creatorId === user?.id ? user?.username : 'Unknown')
+        : (room.createdBy?.username || 'Unknown');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
@@ -21,30 +28,30 @@ const RoomCard = ({ room, onJoin, onDelete }) => {
     };
 
     return (
-        <div className="group bg-gray-600/20 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-purple-500/50 transition-all hover:shadow-xl hover:shadow-purple-500/10 transform hover:-translate-y-1">
-            <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                    <h3 className="text-xl font-bold text-white mb-1">
+        <div className="bg-surface border border-border rounded-xl p-5 hover:border-border-hover transition-all">
+            <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold text-tx mb-0.5 truncate">
                         {room.roomName}
                     </h3>
-                    <p className="text-sm text-gray-400">
-                        Created by {room.createdBy?.username || 'Unknown'}
-                        {isOwner && <span className="ml-2 text-purple-400">(You)</span>}
+                    <p className="text-xs text-tx-muted">
+                        by {creatorName}
+                        {isOwner && <span className="ml-1.5 text-tx-secondary">(You)</span>}
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <div className={`px-3 py-1 rounded-full text-xs font-semibold ${isFull
-                        ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                <div className="flex items-center gap-2 ml-3">
+                    <div className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${isFull
+                        ? 'bg-danger/10 text-danger border-danger/20'
+                        : 'bg-success/10 text-success border-success/20'
                         }`}>
-                        {isFull ? 'Full' : 'Available'}
+                        {isFull ? 'Full' : 'Open'}
                     </div>
 
                     {isOwner && (
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="p-2 text-red-400 cursor-pointer hover:text-red-300 hover:bg-red-500/10 rounded-xl transition"
+                            className="p-1.5 text-tx-muted cursor-pointer hover:text-danger hover:bg-danger/10 rounded-lg transition"
                             title="Delete room"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,33 +62,33 @@ const RoomCard = ({ room, onJoin, onDelete }) => {
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-gray-400 mb-5 pb-5 border-b border-white/5">
-                <div className="flex items-center gap-2">
-                    <span>👥</span>
-                    <span className="font-semibold">{room.participants.length} / {room.maxParticipants}</span>
+            <div className="flex items-center gap-3 text-sm text-tx-secondary mb-4 pb-4 border-b border-border">
+                <div className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-tx-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <span className="font-medium text-xs">{room.participants.length} / {room.maxParticipants}</span>
                 </div>
             </div>
 
             <button
                 onClick={onJoin}
                 disabled={isFull}
-                className={`w-full py-3 rounded-xl font-semibold transition-all ${isFull
-                    ? 'bg-gray-600/20 text-gray-500 cursor-not-allowed'
-                    : 'bg-linear-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-purple-500/50 cursor-pointer transform hover:scale-105 active:scale-95'
+                className={`w-full py-2.5 rounded-lg font-medium transition-all text-sm ${isFull
+                    ? 'bg-bg-elevated text-tx-muted cursor-not-allowed'
+                    : 'bg-accent text-bg hover:bg-accent-hover cursor-pointer'
                     }`}
             >
                 {isFull ? 'Room Full' : 'Join Room'}
             </button>
 
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-gray-950/20 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-slate-900 rounded-3xl p-6 w-full max-w-md border border-white/10 shadow-2xl">
-                        <h3 className="text-xl font-bold text-white mb-4">Delete Room?</h3>
-                        <p className="text-gray-400 mb-6">
-                            Are you sure you want to delete "{room.roomName}"? This action cannot be undone.
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-surface rounded-xl p-6 w-full max-w-sm border border-border shadow-lg">
+                        <h3 className="text-lg font-semibold text-tx mb-3">Delete Room?</h3>
+                        <p className="text-tx-secondary text-sm mb-5">
+                            Are you sure you want to delete "{room.roomName}"?
                             {room.participants.length > 0 && (
-                                <span className="block mt-2 text-red-400">
-                                    Warning: {room.participants.length} participant(s) will be disconnected.
+                                <span className="block mt-2 text-danger text-xs">
+                                    {room.participants.length} participant(s) will be disconnected.
                                 </span>
                             )}
                         </p>
@@ -89,14 +96,14 @@ const RoomCard = ({ room, onJoin, onDelete }) => {
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
                                 disabled={deleting}
-                                className="flex-1 py-3 bg-white/5 text-white cursor-pointer rounded-xl font-semibold hover:bg-white/10 transition disabled:opacity-50"
+                                className="flex-1 py-2.5 bg-bg-elevated text-tx cursor-pointer rounded-lg font-medium hover:bg-bg-hover transition text-sm disabled:opacity-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleDelete}
                                 disabled={deleting}
-                                className="flex-1 py-3 bg-red-500 cursor-pointer text-white rounded-xl font-semibold hover:bg-red-600 transition  disabled:opacity-50"
+                                className="flex-1 py-2.5 bg-danger cursor-pointer text-white rounded-lg font-medium hover:bg-danger-hover transition text-sm disabled:opacity-50"
                             >
                                 {deleting ? 'Deleting...' : 'Delete'}
                             </button>

@@ -22,53 +22,47 @@ const Login = ({ onRegisterClick }) => {
     };
 
     return (
-        <div className="min-h-screen bg-linear-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-            {/* Animated background */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute w-96 h-96 bg-purple-500/20 rounded-full blur-3xl -top-48 -left-48 animate-pulse"></div>
-                <div className="absolute w-96 h-96 bg-pink-500/20 rounded-full blur-3xl -bottom-48 -right-48 animate-pulse" style={{ animationDelay: '1s' }}></div>
-            </div>
-
-            <div className="relative bg-white/5 backdrop-blur-2xl rounded-3xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
+        <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+            <div className="bg-surface border border-border rounded-2xl p-8 w-full max-w-md shadow-sm">
                 <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>
-                    <p className="text-gray-400">Sign in to continue</p>
+                    <h2 className="text-2xl font-semibold text-tx mb-1">Welcome Back</h2>
+                    <p className="text-tx-secondary text-sm">Sign in to continue</p>
                 </div>
 
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="bg-danger/10 border border-danger/30 text-danger px-4 py-3 rounded-lg mb-6 text-sm">
                         {error}
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                        <label className="block text-white/90 mb-2 text-sm font-medium">Email</label>
+                        <label className="block text-tx-secondary mb-2 text-sm font-medium">Email</label>
                         <input
                             type="email"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             required
-                            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
+                            className="w-full px-4 py-3 bg-bg-elevated border border-border rounded-lg text-tx placeholder-tx-muted focus:outline-none focus:border-border-hover transition-all"
                             placeholder="jay@me.com"
                         />
                     </div>
 
                     <div className="relative">
-                        <label className="block text-white/90 mb-2 text-sm font-medium">Password</label>
+                        <label className="block text-tx-secondary mb-2 text-sm font-medium">Password</label>
                         <input
-                            type={showPassword ? "text" : "password"} // <-- toggle here
+                            type={showPassword ? "text" : "password"}
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             required
-                            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all pr-10"
+                            className="w-full px-4 py-3 bg-bg-elevated border border-border rounded-lg text-tx placeholder-tx-muted focus:outline-none focus:border-border-hover transition-all pr-10"
                             placeholder="••••••••"
                         />
 
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 pt-7 cursor-pointer text-gray-300 hover:text-gray-300 focus:outline-none"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 pt-7 cursor-pointer text-tx-muted hover:text-tx-secondary focus:outline-none"
                         >
                             {showPassword ? (
                                 <EyeOff className="h-5 w-5" />
@@ -82,20 +76,20 @@ const Login = ({ onRegisterClick }) => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-linear-to-r cursor-pointer from-purple-500 to-pink-500 text-white py-3.5 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
+                        className="w-full bg-accent cursor-pointer text-bg py-3 rounded-lg font-medium hover:bg-accent-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? (
                             <span className="flex items-center justify-center gap-2">
-                                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                                Logging in...
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-bg"></div>
+                                Signing in...
                             </span>
-                        ) : 'Login'}
+                        ) : 'Sign In'}
                     </button>
                 </form>
 
-                <p className="text-gray-400 text-center mt-6 text-sm">
+                <p className="text-tx-muted text-center mt-6 text-sm">
                     Don't have an account?{' '}
-                    <button onClick={onRegisterClick} className="text-purple-400 cursor-pointer hover:text-purple-300 font-semibold transition-colors">
+                    <button onClick={onRegisterClick} className="text-tx cursor-pointer hover:underline font-medium transition-colors">
                         Register
                     </button>
                 </p>

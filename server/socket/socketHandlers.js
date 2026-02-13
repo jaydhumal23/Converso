@@ -30,37 +30,40 @@ exports.handleSocketConnection = (io) => {
     // Join room
     socket.on('join-room', async ({ roomId, userId, username }) => {
       try {
-        const room = await Room.findOne({ roomId });
+        // Use atomic findOneAndUpdate to avoid version conflicts
+        const existingRoom = await Room.findOne({ roomId });
 
-        if (!room) {
+        if (!existingRoom) {
           return socket.emit('error', { message: 'Room not found' });
         }
 
-        // Check if room is full
-        if (room.participants.length >= room.maxParticipants) {
+        if (existingRoom.participants.length >= existingRoom.maxParticipants) {
           return socket.emit('error', { message: 'Room is full' });
         }
 
-        // Check if user already in room
-        const existingParticipant = room.participants.find(
+        const alreadyIn = existingRoom.participants.some(
           p => p.userId.toString() === userId
         );
 
-        if (!existingParticipant) {
-          // Add participant
-          room.participants.push({
-            userId,
-            username,
-            socketId: socket.id,
-            joinedAt: new Date(),
-            isMuted: false,
-            isVideoOff: false
-          });
-          await room.save();
+        let room;
+        if (alreadyIn) {
+          // Update socket ID atomically
+          room = await Room.findOneAndUpdate(
+            { roomId, 'participants.userId': userId },
+            { $set: { 'participants.$.socketId': socket.id } },
+            { new: true }
+          );
         } else {
-          // Update socket ID if reconnecting
-          existingParticipant.socketId = socket.id;
-          await room.save();
+          // Add participant atomically
+          room = await Room.findOneAndUpdate(
+            { roomId, $expr: { $lt: [{ $size: '$participants' }, '$maxParticipants'] } },
+            { $push: { participants: { userId, username, socketId: socket.id, joinedAt: new Date(), isMuted: false, isVideoOff: false } } },
+            { new: true }
+          );
+        }
+
+        if (!room) {
+          return socket.emit('error', { message: 'Could not join room' });
         }
 
         // Join socket room
@@ -90,11 +93,13 @@ exports.handleSocketConnection = (io) => {
           isVideoOff: false
         });
 
-        // Update room list for lobby
-        io.emit('room-updated', {
-          roomId: room.roomId,
-          participantCount: room.participants.length
-        });
+        // Update room list for lobby - send full room data
+        const updatedRoom = await Room.findOne({ roomId })
+          .populate('createdBy', 'username')
+          .populate('participants.userId', 'username');
+        if (updatedRoom) {
+          io.emit('room-updated', updatedRoom.toObject({ virtuals: true }));
+        }
 
         console.log(` ${username} joined room ${roomId} (${room.participants.length}/${room.maxParticipants})`);
       } catch (error) {
@@ -121,19 +126,16 @@ exports.handleSocketConnection = (io) => {
     // Toggle mic
     socket.on('toggle-mic', async ({ roomId, userId, isMuted }) => {
       try {
-        const room = await Room.findOne({ roomId });
-        const participant = room.participants.find(p => p.userId.toString() === userId);
+        await Room.findOneAndUpdate(
+          { roomId, 'participants.userId': userId },
+          { $set: { 'participants.$.isMuted': isMuted } }
+        );
 
-        if (participant) {
-          participant.isMuted = isMuted;
-          await room.save();
-
-          socket.to(roomId).emit('user-mic-toggled', {
-            socketId: socket.id,
-            userId,
-            isMuted
-          });
-        }
+        socket.to(roomId).emit('user-mic-toggled', {
+          socketId: socket.id,
+          userId,
+          isMuted
+        });
       } catch (error) {
         console.error(' Toggle mic error:', error);
       }
@@ -142,19 +144,16 @@ exports.handleSocketConnection = (io) => {
     // Toggle video
     socket.on('toggle-video', async ({ roomId, userId, isVideoOff }) => {
       try {
-        const room = await Room.findOne({ roomId });
-        const participant = room.participants.find(p => p.userId.toString() === userId);
+        await Room.findOneAndUpdate(
+          { roomId, 'participants.userId': userId },
+          { $set: { 'participants.$.isVideoOff': isVideoOff } }
+        );
 
-        if (participant) {
-          participant.isVideoOff = isVideoOff;
-          await room.save();
-
-          socket.to(roomId).emit('user-video-toggled', {
-            socketId: socket.id,
-            userId,
-            isVideoOff
-          });
-        }
+        socket.to(roomId).emit('user-video-toggled', {
+          socketId: socket.id,
+          userId,
+          isVideoOff
+        });
       } catch (error) {
         console.error(' Toggle video error:', error);
       }
@@ -193,43 +192,38 @@ exports.handleSocketConnection = (io) => {
 // Helper function to handle leaving room
 async function handleLeaveRoom(socket, io, roomId, userId) {
   try {
-    const room = await Room.findOne({ roomId });
+    // Atomically remove participant and return the updated document
+    const room = await Room.findOneAndUpdate(
+      { roomId },
+      { $pull: { participants: { userId } } },
+      { new: true }
+    );
 
-    if (room) {
-      // Find the participant to get their info before removing
-      const leavingParticipant = room.participants.find(
-        p => p.userId.toString() === userId
-      );
+    if (!room) return; // Room already deleted
 
-      // Remove participant
-      room.participants = room.participants.filter(
-        p => p.userId.toString() !== userId
-      );
+    if (room.participants.length === 0) {
+      // Delete empty room
+      await Room.deleteOne({ roomId });
+      io.emit('room-deleted', { roomId });
+      console.log(` Room ${roomId} deleted (empty)`);
+    } else {
+      // Notify remaining participants
+      socket.to(roomId).emit('user-left', {
+        socketId: socket.id,
+        userId
+      });
 
-      // Delete room if empty
-      if (room.participants.length === 0) {
-        await room.deleteOne();
-        io.emit('room-deleted', { roomId });
-        console.log(` Room ${roomId} deleted (empty)`);
-      } else {
-        await room.save();
-
-        //  CRITICAL FIX: Send socketId with user-left event
-        socket.to(roomId).emit('user-left', { 
-          socketId: leavingParticipant ? leavingParticipant.socketId : socket.id,
-          userId 
-        });
-
-        // Update room list
-        io.emit('room-updated', {
-          roomId: room.roomId,
-          participantCount: room.participants.length
-        });
+      // Update room list for lobby
+      const updatedRoom = await Room.findOne({ roomId })
+        .populate('createdBy', 'username')
+        .populate('participants.userId', 'username');
+      if (updatedRoom) {
+        io.emit('room-updated', updatedRoom.toObject({ virtuals: true }));
       }
-
-      socket.leave(roomId);
-      console.log(` User ${userId} left room ${roomId}`);
     }
+
+    socket.leave(roomId);
+    console.log(` User ${userId} left room ${roomId}`);
   } catch (error) {
     console.error(' Leave room error:', error);
   }

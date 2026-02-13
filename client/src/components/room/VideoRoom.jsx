@@ -3,12 +3,21 @@ import { AuthContext } from '../../context/AuthContext';
 import { SocketContext } from '../../context/SocketContext';
 import RemoteVideo from './RemoteVideo';
 import DeviceSettingsModal from './DeviceSettingsModal';
+// Quality presets for video streaming
+const QUALITY_PRESETS = {
+    low: { width: 640, height: 360, frameRate: 15, videoBitrate: 400_000, audioBitrate: 32_000, label: 'Low (360p)' },
+    medium: { width: 960, height: 540, frameRate: 24, videoBitrate: 1_000_000, audioBitrate: 64_000, label: 'Medium (540p)' },
+    high: { width: 1280, height: 720, frameRate: 30, videoBitrate: 2_500_000, audioBitrate: 128_000, label: 'High (720p)' },
+    hd: { width: 1920, height: 1080, frameRate: 30, videoBitrate: 4_000_000, audioBitrate: 128_000, label: 'Full HD (1080p)' },
+};
+
 const VideoRoom = ({ roomId, onLeave }) => {
     const [localStream, setLocalStream] = useState(null);
     const [peers, setPeers] = useState({});
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [quality, setQuality] = useState('high');
     const [devices, setDevices] = useState({
         audioInput: 'default',
         audioOutput: 'default',
@@ -33,45 +42,42 @@ const VideoRoom = ({ roomId, onLeave }) => {
     useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
     useEffect(() => { isVideoOffRef.current = isVideoOff; }, [isVideoOff]);
 
-    if (!socket || !connected) {
-        return (
-            <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="relative mb-6">
-                        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
-                        <div className="absolute inset-0 animate-ping rounded-full h-16 w-16 border border-purple-500/20 mx-auto"></div>
-                    </div>
-                    <p className="text-white text-lg">Connecting to room...</p>
-                </div>
-            </div>
-        );
-    }
-
     // Initialize media stream with enhanced quality
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     useEffect(() => {
+        if (!socket || !connected) return;
         const initStream = async () => {
             try {
                 if (localStreamRef.current) {
                     localStreamRef.current.getTracks().forEach(t => t.stop());
                 }
 
+                const preset = QUALITY_PRESETS[quality] || QUALITY_PRESETS.high;
+
+                const videoConstraints = {
+                    width: { ideal: preset.width, max: preset.width },
+                    height: { ideal: preset.height, max: preset.height },
+                    frameRate: { ideal: preset.frameRate, max: preset.frameRate },
+                };
+                if (devices.videoInput !== 'default') {
+                    videoConstraints.deviceId = { exact: devices.videoInput };
+                } else {
+                    videoConstraints.facingMode = 'user';
+                }
+
+                const audioConstraints = {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: { ideal: 48000 },
+                    channelCount: { ideal: 1 },
+                };
+                if (devices.audioInput !== 'default') {
+                    audioConstraints.deviceId = { exact: devices.audioInput };
+                }
+
                 const constraints = {
-                    video: devices.videoInput !== 'default'
-                        ? { deviceId: { exact: devices.videoInput }, width: { ideal: 1280 }, height: { ideal: 720 } }
-                        : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-                    audio: devices.audioInput !== 'default'
-                        ? {
-                            deviceId: { exact: devices.audioInput },
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        }
-                        : {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        }
+                    video: videoConstraints,
+                    audio: audioConstraints,
                 };
 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -96,7 +102,7 @@ const VideoRoom = ({ roomId, onLeave }) => {
                     }
                 }
 
-                // Replace tracks in existing connections
+                // Replace tracks in existing connections and apply bitrate limits
                 if (roomJoinedRef.current && Object.keys(peersRef.current).length > 0) {
                     console.log(' Replacing tracks in existing connections...');
                     for (const [socketId, peer] of Object.entries(peersRef.current)) {
@@ -109,6 +115,8 @@ const VideoRoom = ({ roomId, onLeave }) => {
                                     console.log(` Replaced ${track.kind} track for peer ${socketId}`);
                                 }
                             }
+                            // Re-apply bitrate limits after track replacement
+                            applyBitrateLimits(peer, preset);
                         } catch (error) {
                             console.error(` Error replacing tracks for peer ${socketId}:`, error);
                         }
@@ -127,10 +135,9 @@ const VideoRoom = ({ roomId, onLeave }) => {
                 localStreamRef.current.getTracks().forEach(t => t.stop());
             }
         };
-    }, [devices]);
+    }, [devices, quality, socket, connected]);
 
 
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     useEffect(() => {
         if (!socket || !localStream || roomJoinedRef.current) return;
 
@@ -160,9 +167,27 @@ const VideoRoom = ({ roomId, onLeave }) => {
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun2.l.google.com:19302' },
                     { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' }
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                    // Free TURN relay for NAT traversal
+                    {
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    }
                 ],
-                iceCandidatePoolSize: 10
+                iceCandidatePoolSize: 10,
+                bundlePolicy: 'max-bundle',
+                rtcpMuxPolicy: 'require'
             });
 
             // CRITICAL: Add all local tracks
@@ -206,6 +231,9 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
                 if (peer.iceConnectionState === 'connected') {
                     console.log(` Successfully connected to ${socketId}`);
+                    // Apply bitrate limits once connected
+                    const preset = QUALITY_PRESETS[quality] || QUALITY_PRESETS.high;
+                    applyBitrateLimits(peer, preset);
                 }
 
                 if (peer.iceConnectionState === 'failed') {
@@ -536,6 +564,37 @@ const VideoRoom = ({ roomId, onLeave }) => {
         setDevices(newDevices);
     };
 
+    const handleQualityChange = (newQuality) => {
+        setQuality(newQuality);
+    };
+
+    // Apply bitrate limits to peer connection senders
+    const applyBitrateLimits = (peer, preset) => {
+        try {
+            const senders = peer.getSenders();
+            senders.forEach(sender => {
+                if (!sender.track) return;
+                const params = sender.getParameters();
+                if (!params.encodings || params.encodings.length === 0) {
+                    params.encodings = [{}];
+                }
+                if (sender.track.kind === 'video') {
+                    params.encodings[0].maxBitrate = preset.videoBitrate;
+                    params.encodings[0].maxFramerate = preset.frameRate;
+                    // Prefer maintain-resolution to keep sharpness
+                    params.degradationPreference = 'maintain-resolution';
+                } else if (sender.track.kind === 'audio') {
+                    params.encodings[0].maxBitrate = preset.audioBitrate;
+                }
+                sender.setParameters(params).catch(err => {
+                    console.warn('Could not set sender parameters:', err);
+                });
+            });
+        } catch (err) {
+            console.warn('applyBitrateLimits error:', err);
+        }
+    };
+
     const handleLeave = () => {
         if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach(t => t.stop());
@@ -545,45 +604,61 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
     const participantCount = Object.keys(peers).length + 1;
 
+    if (!socket || !connected) {
+        return (
+            <div className="min-h-screen bg-bg flex items-center justify-center">
+                <div className="text-center">
+                    <div className="mb-6">
+                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-tx-muted mx-auto"></div>
+                    </div>
+                    <p className="text-tx-secondary text-sm">Connecting to room...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
+        <div className="min-h-screen bg-bg flex flex-col">
             {/* Header */}
-            <div className="bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-6 py-4">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-xl font-bold text-white">Room: {roomId}</h2>
-                        <div className="text-sm text-gray-400 flex items-center gap-2">
-                            <span className="text-lg">👥</span>
-                            {participantCount} participant{participantCount !== 1 ? 's' : ''}
+            <div className="bg-surface border-b border-border px-3 sm:px-6 py-3 sm:py-4">
+                <div className="flex flex-wrap justify-between items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 min-w-0">
+                        <h2 className="text-sm sm:text-base font-semibold text-tx truncate tracking-tight">Room: {roomId}</h2>
+                        <div className="text-xs text-tx-muted flex items-center gap-1.5">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            {participantCount}
+                        </div>
+                        <div className="hidden sm:block text-xs text-tx-muted border border-border px-2 py-0.5 rounded font-medium">
+                            {QUALITY_PRESETS[quality]?.label || '720p'}
                         </div>
                     </div>
                     <button
                         onClick={handleLeave}
-                        className="bg-red-500 cursor-pointer text-white px-4 py-2 rounded-xl hover:bg-red-600 transition shadow-lg"
+                        className="bg-danger cursor-pointer text-white px-3 py-1.5 rounded-lg hover:bg-danger-hover transition text-xs sm:text-sm font-medium whitespace-nowrap"
                     >
-                        Leave Room
+                        Leave
                     </button>
                 </div>
             </div>
 
             {/* Video Grid */}
-            <div className="flex-1 p-6 ">
-                <div className={`grid gap-4 h-full ${participantCount === 1 ? 'grid-cols-1 md:grid-cols-2' :
+            <div className="flex-1 p-2 sm:p-4 md:p-5">
+                <div className={`grid gap-3 h-full ${participantCount === 1 ? 'grid-cols-1 md:grid-cols-2' :
                     participantCount === 2 ? 'grid-cols-1 md:grid-cols-2' :
                         participantCount <= 4 ? 'grid-cols-1 md:grid-cols-3' :
                             'grid-cols-1 md:grid-cols-3 lg:grid-cols-4'
                     }`}>
                     {/* Local Video */}
-                    <div className="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video border border-white/10 shadow-xl group">
+                    <div className="relative bg-bg-secondary rounded-xl overflow-hidden aspect-video border border-border">
                         {isVideoOff ? (
-                            <div className="absolute inset-0 bg-linear-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-bg-elevated flex items-center justify-center">
                                 <div className="text-center">
-                                    <div className="w-20 h-20 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <svg className="w-10 h-10 text-purple-300" fill="currentColor" viewBox="0 0 24 24">
+                                    <div className="w-16 h-16 bg-accent-subtle rounded-full flex items-center justify-center mx-auto mb-2">
+                                        <svg className="w-8 h-8 text-tx-muted" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                                         </svg>
                                     </div>
-                                    <p className="text-white font-medium">{user?.username}</p>
+                                    <p className="text-tx-secondary text-sm font-medium">{user?.username}</p>
                                 </div>
                             </div>
                         ) : (
@@ -595,10 +670,10 @@ const VideoRoom = ({ roomId, onLeave }) => {
                                 className="w-full h-full object-cover"
                             />
                         )}
-                        <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm px-3 py-2 rounded-xl text-white text-sm font-medium flex items-center gap-2">
+                        <div className="absolute bottom-3 left-3 bg-black/60 px-2.5 py-1.5 rounded-lg text-white text-xs font-medium flex items-center gap-1.5">
                             <span>You</span>
-                            {isMuted && <span className="text-red-300">• Muted</span>}
-                            {isVideoOff && <span className="text-amber-300">• Video Off</span>}
+                            {isMuted && <span className="text-danger">·</span>}
+                            {isVideoOff && <span className="text-warning">·</span>}
                         </div>
                     </div>
 
@@ -610,27 +685,28 @@ const VideoRoom = ({ roomId, onLeave }) => {
                             socketId={sid}
                             username={data?.username}
                             audioOutput={devices.audioOutput}
+                            peerConnection={peersRef.current[sid]}
                         />
                     ))}
                 </div>
             </div>
 
             {/* Controls */}
-            <div className="bg-slate-900/50 backdrop-blur-xl border-t border-white/5 px-6 py-4">
-                <div className="flex justify-center gap-4">
+            <div className="bg-surface border-t border-border px-3 sm:px-6 py-3 sm:py-4">
+                <div className="flex justify-center gap-2 sm:gap-3">
                     <button
                         onClick={toggleMic}
-                        className={`p-4 rounded-2xl cursor-pointer transition transform hover:scale-110 active:scale-95 ${isMuted ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/50' : 'bg-white/10 hover:bg-white/20'
+                        className={`p-3 rounded-xl cursor-pointer transition ${isMuted ? 'bg-danger hover:bg-danger-hover text-white' : 'bg-bg-elevated hover:bg-bg-hover text-tx'
                             }`}
                         title={isMuted ? 'Unmute' : 'Mute'}
                     >
                         {isMuted ? (
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
                             </svg>
                         ) : (
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                             </svg>
                         )}
@@ -638,17 +714,17 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
                     <button
                         onClick={toggleVideo}
-                        className={`p-4 rounded-2xl cursor-pointer transition transform hover:scale-110 active:scale-95 ${isVideoOff ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/50' : 'bg-white/10 hover:bg-white/20'
+                        className={`p-3 rounded-xl cursor-pointer transition ${isVideoOff ? 'bg-danger hover:bg-danger-hover text-white' : 'bg-bg-elevated hover:bg-bg-hover text-tx'
                             }`}
                         title={isVideoOff ? 'Start Video' : 'Stop Video'}
                     >
                         {isVideoOff ? (
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
                             </svg>
                         ) : (
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                         )}
@@ -656,10 +732,10 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
                     <button
                         onClick={() => setShowSettings(true)}
-                        className="p-4 rounded-2xl cursor-pointer bg-white/10 hover:bg-white/20 transition transform hover:scale-110 active:scale-95"
+                        className="p-3 rounded-xl cursor-pointer bg-bg-elevated hover:bg-bg-hover text-tx transition"
                         title="Settings"
                     >
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
@@ -667,11 +743,11 @@ const VideoRoom = ({ roomId, onLeave }) => {
 
                     <button
                         onClick={handleLeave}
-                        className="p-4 rounded-2xl cursor-pointer bg-red-500 hover:bg-red-600 transition transform hover:scale-110 active:scale-95 shadow-lg shadow-red-500/50"
+                        className="p-3 rounded-xl cursor-pointer bg-danger hover:bg-danger-hover text-white transition"
                         title="Leave Room"
                     >
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3h6a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zm0 16h6a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                     </button>
                 </div>
@@ -682,6 +758,8 @@ const VideoRoom = ({ roomId, onLeave }) => {
                     onClose={() => setShowSettings(false)}
                     currentDevices={devices}
                     onDeviceChange={handleDeviceChange}
+                    currentQuality={quality}
+                    onQualityChange={handleQualityChange}
                 />
             )}
         </div>

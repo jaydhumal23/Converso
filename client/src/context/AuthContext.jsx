@@ -25,7 +25,12 @@ const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
-        await api.auth.logout();
+        try {
+            await api.auth.logout();
+        } catch (err) {
+            // Ignore errors (e.g., token already expired)
+            console.log('Logout API error (ignored):', err.message);
+        }
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);

@@ -1,10 +1,75 @@
 import React, { useRef, useState, useEffect } from 'react';
 
 
-const RemoteVideo = ({ stream, socketId, username, audioOutput }) => {
+const RemoteVideo = ({ stream, socketId, username, audioOutput, peerConnection }) => {
     const videoRef = useRef();
     const [hasVideo, setHasVideo] = useState(true);
     const [hasAudio, setHasAudio] = useState(true);
+    const [stats, setStats] = useState(null);
+
+    // Collect WebRTC stats periodically
+    useEffect(() => {
+        if (!peerConnection) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const report = await peerConnection.getStats();
+                let videoInfo = {};
+                let audioInfo = {};
+
+                report.forEach((stat) => {
+                    if (stat.type === 'inbound-rtp' && stat.kind === 'video') {
+                        videoInfo = {
+                            width: stat.frameWidth,
+                            height: stat.frameHeight,
+                            fps: stat.framesPerSecond,
+                            bytesReceived: stat.bytesReceived,
+                            packetsLost: stat.packetsLost || 0,
+                            jitter: stat.jitter,
+                        };
+                    }
+                    if (stat.type === 'inbound-rtp' && stat.kind === 'audio') {
+                        audioInfo = {
+                            bytesReceived: stat.bytesReceived,
+                            packetsLost: stat.packetsLost || 0,
+                            jitter: stat.jitter,
+                        };
+                    }
+                });
+
+                setStats(prev => {
+                    const prevVideoBytes = prev?.video?.bytesReceived || 0;
+                    const videoBitrate = prevVideoBytes > 0
+                        ? Math.round(((videoInfo.bytesReceived - prevVideoBytes) * 8) / 2) // bits per second (2s interval)
+                        : 0;
+
+                    return {
+                        video: { ...videoInfo, bitrate: videoBitrate },
+                        audio: audioInfo,
+                    };
+                });
+            } catch {
+                // peer might be closed
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [peerConnection]);
+
+    // Quality indicator color based on stats
+    const getQualityColor = () => {
+        if (!stats?.video?.bitrate) return 'bg-tx-muted';
+        const bitrate = stats.video.bitrate;
+        if (bitrate > 1_500_000) return 'bg-success';
+        if (bitrate > 500_000) return 'bg-warning';
+        return 'bg-danger';
+    };
+
+    const formatBitrate = (bps) => {
+        if (!bps || bps <= 0) return '';
+        if (bps > 1_000_000) return `${(bps / 1_000_000).toFixed(1)}Mbps`;
+        return `${Math.round(bps / 1000)}kbps`;
+    };
 
     useEffect(() => {
         if (videoRef.current && stream) {
@@ -50,7 +115,7 @@ const RemoteVideo = ({ stream, socketId, username, audioOutput }) => {
     }, [stream, audioOutput]);
 
     return (
-        <div className="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video border border-white/10 shadow-xl">
+        <div className="relative bg-bg-elevated rounded-xl overflow-hidden aspect-video border border-border">
             {stream && hasVideo ? (
                 <video
                     ref={videoRef}
@@ -59,25 +124,37 @@ const RemoteVideo = ({ stream, socketId, username, audioOutput }) => {
                     className="w-full h-full object-cover"
                 />
             ) : (
-                <div className="absolute inset-0 bg-linear-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                <div className="absolute inset-0 bg-bg-elevated flex items-center justify-center">
                     <div className="text-center">
-                        <div className="w-20 h-20 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-10 h-10 text-purple-300" fill="currentColor" viewBox="0 0 24 24">
+                        <div className="w-16 h-16 bg-bg-hover rounded-full flex items-center justify-center mx-auto mb-2">
+                            <svg className="w-8 h-8 text-tx-muted" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                             </svg>
                         </div>
                         {!stream && (
-                            <p className="text-white/60 text-sm animate-pulse">Connecting...</p>
+                            <p className="text-tx-muted text-xs animate-pulse">Connecting...</p>
                         )}
                     </div>
                 </div>
             )}
 
-            <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm px-3 py-2 rounded-xl text-white text-sm font-medium flex items-center gap-2">
+            <div className="absolute bottom-3 left-3 bg-black/60 px-2.5 py-1.5 rounded-lg text-white text-xs font-medium flex items-center gap-1.5">
                 <span>{username || 'Participant'}</span>
-                {!hasAudio && <span className="text-red-300">• Muted</span>}
-                {!hasVideo && <span className="text-amber-300">• No Video</span>}
+                {!hasAudio && <span className="text-danger">·Muted</span>}
+                {!hasVideo && <span className="text-warning">·Off</span>}
             </div>
+
+            {/* Connection quality indicator */}
+            {stats?.video?.bitrate > 0 && (
+                <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 px-2 py-1 rounded-md">
+                    <div className={`w-1.5 h-1.5 rounded-full ${getQualityColor()}`}></div>
+                    <span className="text-white/70 text-[10px] font-mono">
+                        {stats.video.width && stats.video.height ? `${stats.video.width}×${stats.video.height}` : ''}
+                        {stats.video.fps ? ` ${Math.round(stats.video.fps)}fps` : ''}
+                        {stats.video.bitrate ? ` ${formatBitrate(stats.video.bitrate)}` : ''}
+                    </span>
+                </div>
+            )}
         </div>
     );
 };
